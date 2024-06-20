@@ -6,11 +6,8 @@ import { LoginCredentials, SignuCredentials } from './authInterface';
 
 interface AuthState {
   isAuthenticated: boolean;
-  isVerified:boolean;
-  user: { fullName: string; username: string; email: string } | null;
-  status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
-  isLoading :boolean;
+  user:any;
+ loading :boolean;
   signup:boolean;
   token:string | null
 }
@@ -18,12 +15,9 @@ interface AuthState {
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
-  status: 'idle',
-  error: null,
-  isVerified: false,
-  isLoading:false,
   signup:false,
-  token : null
+  token : null,
+  loading:false
 };
 
 export const loginUserAsync = createAsyncThunk(
@@ -40,28 +34,15 @@ export const signupUserAsync = createAsyncThunk(
   }
 );
 
-// export const verifyUser = createAsyncThunk(
-//   'auth/verifyUser',
-//   async () => {
-//     const data = await api.get('/api/v1/user/verify-user');    
-//     return {data}
-//   }
-// );
-// export const loggOutUser = createAsyncThunk(
-//   'auth/logout',
-//   async () => {
-//     const data = await api.get('/api/v1/user/logout')
-//     return data
-//   }
-// );
-
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
     logout: (state) => {
-      localStorage.removeItem("token");
-      state.token = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      state.user = null;
+      state.isAuthenticated = false;
     },
     getToken:(state)=>{
       state.token = localStorage.getItem("token")
@@ -70,73 +51,34 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(loginUserAsync.pending, (state) => {
-        state.status = 'loading';
+       state.loading = true
       
       })
       .addCase(loginUserAsync.fulfilled, (state, action: PayloadAction<any>) => {
-        state.status = 'succeeded';
+        state.loading = false;
         state.isAuthenticated = true;
-        state.isVerified = true
-        state.user = action.payload;
-        state.error = null;
-        localStorage.setItem("token", action.payload.data.data.accessToken);
-       state.token = localStorage.getItem("token")
+        state.user = action.payload.user;
+        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
       })
-      .addCase(loginUserAsync.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.error.message || 'Failed to login';
-      
+      .addCase(loginUserAsync.rejected, (state) => {
+        state.loading = false
       })
       .addCase(signupUserAsync.pending, (state) => {
-        state.status = 'loading';
+        state.loading = true
       })
-      .addCase(signupUserAsync.fulfilled, (state) => {
-        state.status = 'succeeded';
-        state.error = null;
+      .addCase(signupUserAsync.fulfilled, (state,action) => {
+        state.loading = false
         toast.success("signup successfully")
         state.signup = true
+        state.user = action.payload.user;
+        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
         
       })
-      .addCase(signupUserAsync.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.error.message || 'Failed to signup';
+      .addCase(signupUserAsync.rejected, (state) => {
+       state.loading = false
       })
-    //   .addCase(verifyUser.pending, (state) => {
-    //     state.status = 'loading';
-    //     state.isLoading = true
-    //   })
-    //   .addCase(verifyUser.fulfilled, (state, action: PayloadAction<any>) => {
-    //     state.status = 'succeeded';
-    //     state.isVerified = true;
-    //     state.user = action.payload;
-    //     state.error = null;
-    //     state.isLoading = false
-    //     console.log("verify user",action.payload)
-    //   })
-    //   .addCase(verifyUser.rejected, (state) => {
-    //     state.status = 'failed';
-    //     state.isVerified = false;
-    //     state.user = null;
-    //     state.isLoading = false
-    //   })
-    //   .addCase(loggOutUser.pending, (state) => {
-    //     state.status = 'loading';
-    //     state.isLoading = true
-    //   })
-    //   .addCase(loggOutUser.fulfilled, (state, action: PayloadAction<any>) => {
-    //     state.status = 'succeeded';
-    //     state.isVerified = false;
-    //     state.error = null;
-    //     state.isLoading = false
-    //     console.log("logout user",action.payload)
-    //     toast.success("logout successfull")
-    //   })
-    //   .addCase(loggOutUser.rejected, (state) => {
-    //     state.status = 'failed';
-    //     state.isVerified = false;
-    //     state.user = null;
-    //     state.isLoading = false
-    //   });
   },
 });
 
